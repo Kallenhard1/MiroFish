@@ -451,7 +451,10 @@ def prepare_simulation():
                 "success": False,
                 "error": f"项目不存在: {state.project_id}"
             }), 404
-        
+
+        # Clamp entity count to max_personas if set
+        max_personas = (project.limits or {}).get('max_personas') if project else None
+
         # 获取模拟需求
         simulation_requirement = project.simulation_requirement or ""
         if not simulation_requirement:
@@ -582,7 +585,8 @@ def prepare_simulation():
                     defined_entity_types=entity_types_list,
                     use_llm_for_profiles=use_llm_for_profiles,
                     progress_callback=progress_callback,
-                    parallel_profile_count=parallel_profile_count
+                    parallel_profile_count=parallel_profile_count,
+                    max_personas=max_personas
                 )
                 
                 # 任务完成
@@ -1862,7 +1866,7 @@ def get_simulation_actions(simulation_id: str):
     获取模拟中的Agent动作历史
     
     Query参数：
-        limit: 返回数量（默认100）
+        limit: 返回数量（默认20）
         offset: 偏移量（默认0）
         platform: 过滤平台（twitter/reddit）
         agent_id: 过滤Agent ID
@@ -1878,7 +1882,7 @@ def get_simulation_actions(simulation_id: str):
         }
     """
     try:
-        limit = request.args.get('limit', 100, type=int)
+        limit = request.args.get('limit', 20, type=int)
         offset = request.args.get('offset', 0, type=int)
         platform = request.args.get('platform')
         agent_id = request.args.get('agent_id', type=int)
@@ -1993,7 +1997,7 @@ def get_simulation_posts(simulation_id: str):
     """
     try:
         platform = request.args.get('platform', 'reddit')
-        limit = request.args.get('limit', 50, type=int)
+        limit = request.args.get('limit', 20, type=int)
         offset = request.args.get('offset', 0, type=int)
         
         sim_dir = os.path.join(
@@ -2069,7 +2073,7 @@ def get_simulation_comments(simulation_id: str):
     """
     try:
         post_id = request.args.get('post_id')
-        limit = request.args.get('limit', 50, type=int)
+        limit = request.args.get('limit', 20, type=int)
         offset = request.args.get('offset', 0, type=int)
         
         sim_dir = os.path.join(
@@ -2544,7 +2548,7 @@ def get_interview_history():
         simulation_id = data.get('simulation_id')
         platform = data.get('platform')  # 不指定则返回两个平台的历史
         agent_id = data.get('agent_id')
-        limit = data.get('limit', 100)
+        limit = data.get('limit', 20)
         
         if not simulation_id:
             return jsonify({

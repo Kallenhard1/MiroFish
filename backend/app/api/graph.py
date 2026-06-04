@@ -56,7 +56,7 @@ def list_projects():
     """
     列出所有项目
     """
-    limit = request.args.get('limit', 50, type=int)
+    limit = request.args.get('limit', 20, type=int)
     projects = ProjectManager.list_projects(limit=limit)
     
     return jsonify({
@@ -174,6 +174,17 @@ def generate_ontology():
         # 创建项目
         project = ProjectManager.create_project(name=project_name)
         project.simulation_requirement = simulation_requirement
+        # Store pre-run limits if provided by the frontend
+        project.limits = {
+            k: int(v)
+            for k, v in {
+                'max_nodes': request.form.get('max_nodes'),
+                'max_relations': request.form.get('max_relations'),
+                'max_personas': request.form.get('max_personas'),
+                'max_llm_calls': request.form.get('max_llm_calls'),
+            }.items()
+            if v is not None
+        }
         logger.info(f"创建项目: {project.project_id}")
         
         # 保存文件并提取文本
@@ -463,15 +474,23 @@ def build_graph():
                     progress=95
                 )
                 graph_data = builder.get_graph_data(graph_id)
-                
+
                 # 更新项目状态
                 project.status = ProjectStatus.GRAPH_COMPLETED
                 ProjectManager.save_project(project)
-                
+
                 node_count = graph_data.get("node_count", 0)
                 edge_count = graph_data.get("edge_count", 0)
                 build_logger.info(f"[{task_id}] 图谱构建完成: graph_id={graph_id}, 节点={node_count}, 边={edge_count}")
-                
+
+                # Check if node/edge counts exceeded limits
+                limits = project.limits or {}
+                limits_hit = []
+                if limits.get('max_nodes') and node_count >= limits['max_nodes']:
+                    limits_hit.append('max_nodes')
+                if limits.get('max_relations') and edge_count >= limits['max_relations']:
+                    limits_hit.append('max_relations')
+
                 # 完成
                 task_manager.update_task(
                     task_id,
@@ -483,7 +502,8 @@ def build_graph():
                         "graph_id": graph_id,
                         "node_count": node_count,
                         "edge_count": edge_count,
-                        "chunk_count": total_chunks
+                        "chunk_count": total_chunks,
+                        "limits_hit": limits_hit,
                     }
                 )
                 

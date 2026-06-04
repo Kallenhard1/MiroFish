@@ -234,7 +234,8 @@ class SimulationManager:
         defined_entity_types: Optional[List[str]] = None,
         use_llm_for_profiles: bool = True,
         progress_callback: Optional[callable] = None,
-        parallel_profile_count: int = 3
+        parallel_profile_count: int = 3,
+        max_personas: int = None
     ) -> SimulationState:
         """
         准备模拟环境（全程自动化）
@@ -285,23 +286,27 @@ class SimulationManager:
             
             state.entities_count = filtered.filtered_count
             state.entity_types = list(filtered.entity_types)
-            
+
             if progress_callback:
                 progress_callback(
-                    "reading", 100, 
+                    "reading", 100,
                     f"完成，共 {filtered.filtered_count} 个实体",
                     current=filtered.filtered_count,
                     total=filtered.filtered_count
                 )
-            
+
             if filtered.filtered_count == 0:
                 state.status = SimulationStatus.FAILED
                 state.error = "没有找到符合条件的实体，请检查图谱是否正确构建"
                 self._save_simulation_state(state)
                 return state
-            
+
             # ========== 阶段2: 生成Agent Profile ==========
-            total_entities = len(filtered.entities)
+            entities = filtered.entities
+            if max_personas and len(entities) > max_personas:
+                logger.warning(f"Clamping entities from {len(entities)} to max_personas={max_personas}")
+                entities = entities[:max_personas]
+            total_entities = len(entities)
             
             if progress_callback:
                 progress_callback(
@@ -336,7 +341,7 @@ class SimulationManager:
                 realtime_platform = "twitter"
             
             profiles = generator.generate_profiles_from_entities(
-                entities=filtered.entities,
+                entities=entities,
                 use_llm=use_llm_for_profiles,
                 progress_callback=profile_progress,
                 graph_id=state.graph_id,  # 传入graph_id用于Zep检索
@@ -405,7 +410,7 @@ class SimulationManager:
                 graph_id=state.graph_id,
                 simulation_requirement=simulation_requirement,
                 document_text=document_text,
-                entities=filtered.entities,
+                entities=entities,
                 enable_twitter=state.enable_twitter,
                 enable_reddit=state.enable_reddit
             )
