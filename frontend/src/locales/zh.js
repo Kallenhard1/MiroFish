@@ -40,12 +40,12 @@ export default {
   'home.initializing': '初始化中...',
   'home.inputParams': '输入参数',
   // home advanced limits
-  'home.advancedSettings': '▸ Advanced Settings',
-  'home.advancedSettingsOpen': '▾ Advanced Settings',
-  'home.maxNodes': 'Max graph nodes',
-  'home.maxRelations': 'Max graph edges',
-  'home.maxPersonas': 'Max agents',
-  'home.maxLlmCalls': 'Max LLM calls',
+  'home.advancedSettings': '▸ 高级设置',
+  'home.advancedSettingsOpen': '▾ 高级设置',
+  'home.maxNodes': '最大图节点数',
+  'home.maxRelations': '最大图边数',
+  'home.maxPersonas': '最大Agent数',
+  'home.maxLlmCalls': '最大LLM调用次数',
   'home.limitsHitWarning': '图谱构建触达上限 — 结果为部分数据。',
   // history
   'history.title': '推演记录',
