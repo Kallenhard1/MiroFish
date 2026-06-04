@@ -923,7 +923,9 @@ class ReportAgent:
         self.report_logger: Optional[ReportLogger] = None
         # 控制台日志记录器（在 generate_report 中初始化）
         self.console_logger: Optional[ReportConsoleLogger] = None
-        
+
+        self._calls_remaining = None  # set via limits in generate_report if needed
+
         logger.info(f"ReportAgent 初始化完成: graph_id={graph_id}, simulation_id={simulation_id}")
     
     def _define_tools(self) -> Dict[str, Dict[str, Any]]:
@@ -1588,7 +1590,10 @@ class ReportAgent:
         try:
             # 初始化：创建报告文件夹并保存初始状态
             ReportManager._ensure_report_folder(report_id)
-            
+
+            # Clear any stale cancellation signal from a previous run
+            ReportManager.clear_stop(report_id)
+
             # 初始化日志记录器（结构化日志 agent_log.jsonl）
             self.report_logger = ReportLogger(report_id)
             self.report_logger.log_start(
@@ -1780,10 +1785,14 @@ class ReportAgent:
             return report
 
         except BudgetExceededError:
+            outline_sections = report.outline.sections if report.outline else []
+            pct = 20 + int((len(completed_section_titles) / max(len(outline_sections), 1)) * 70)
             ReportManager.save_report(report)
+            ReportManager.update_progress(
+                report_id, "budget_exceeded", pct, "LLM调用次数已达上限",
+                completed_sections=completed_section_titles
+            )
             if progress_callback:
-                outline_sections = report.outline.sections if report.outline else []
-                pct = 20 + int((len(completed_section_titles) / max(len(outline_sections), 1)) * 70)
                 progress_callback("budget_exceeded", pct, "LLM调用次数已达上限")
             return report
 

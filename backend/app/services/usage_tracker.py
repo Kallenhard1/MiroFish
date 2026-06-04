@@ -49,8 +49,10 @@ class UsageTracker:
     @classmethod
     def _save(cls, project_id: str, data: dict) -> None:
         path = cls._get_path(project_id)
-        with open(path, 'w', encoding='utf-8') as f:
+        tmp = path + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
             json.dump(data, f)
+        os.replace(tmp, path)
 
     @classmethod
     def _rate_for(cls, model_name: str):
