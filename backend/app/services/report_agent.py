@@ -13,6 +13,7 @@ import os
 import json
 import time
 import re
+import threading
 from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -392,6 +393,16 @@ class ReportStatus(str, Enum):
     GENERATING = "generating"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
+    BUDGET_EXCEEDED = "budget_exceeded"
+
+
+class CancellationError(Exception):
+    """Raised when report generation is cooperatively cancelled."""
+
+
+class BudgetExceededError(Exception):
+    """Raised when the max_llm_calls budget is consumed."""
 
 
 @dataclass
@@ -1635,6 +1646,29 @@ class ReportAgent:
             
             for i, section in enumerate(outline.sections):
                 section_num = i + 1
+
+                # Cooperative cancellation check
+                cancellation_event = ReportManager.get_cancellation_event(report_id)
+                if cancellation_event.is_set():
+                    report.status = ReportStatus.CANCELLED
+                    report.error = "Stopped by user request"
+                    ReportManager.save_report(report)
+                    ReportManager.update_progress(
+                        report_id, "cancelled",
+                        20 + int((i / total_sections) * 70),
+                        "已停止生成",
+                        completed_sections=completed_section_titles
+                    )
+                    raise CancellationError("Stopped by user request")
+
+                # Budget check
+                if hasattr(self, '_calls_remaining') and self._calls_remaining is not None:
+                    if self._calls_remaining <= 0:
+                        report.status = ReportStatus.BUDGET_EXCEEDED
+                        report.error = "LLM call budget exhausted"
+                        ReportManager.save_report(report)
+                        raise BudgetExceededError("LLM call budget exhausted")
+
                 base_progress = 20 + int((i / total_sections) * 70)
                 
                 # 更新进度
@@ -1736,16 +1770,32 @@ class ReportAgent:
                 self.console_logger = None
             
             return report
-            
+
+        except CancellationError:
+            ReportManager.save_report(report)
+            if progress_callback:
+                outline_sections = report.outline.sections if report.outline else []
+                pct = 20 + int((len(completed_section_titles) / max(len(outline_sections), 1)) * 70)
+                progress_callback("cancelled", pct, "已停止生成")
+            return report
+
+        except BudgetExceededError:
+            ReportManager.save_report(report)
+            if progress_callback:
+                outline_sections = report.outline.sections if report.outline else []
+                pct = 20 + int((len(completed_section_titles) / max(len(outline_sections), 1)) * 70)
+                progress_callback("budget_exceeded", pct, "LLM调用次数已达上限")
+            return report
+
         except Exception as e:
             logger.error(f"报告生成失败: {str(e)}")
             report.status = ReportStatus.FAILED
             report.error = str(e)
-            
+
             # 记录错误日志
             if self.report_logger:
                 self.report_logger.log_error(str(e), "failed")
-            
+
             # 保存失败状态
             try:
                 ReportManager.save_report(report)
@@ -1755,7 +1805,7 @@ class ReportAgent:
                 )
             except Exception:
                 pass  # 忽略保存失败的错误
-            
+
             # 关闭控制台日志记录器
             if self.console_logger:
                 self.console_logger.close()
@@ -1900,7 +1950,32 @@ class ReportManager:
     
     # 报告存储目录
     REPORTS_DIR = os.path.join(Config.UPLOAD_FOLDER, 'reports')
-    
+
+    # module-level cancellation events keyed by report_id
+    _cancellation_events: Dict[str, threading.Event] = {}
+    _events_lock = threading.Lock()
+
+    @classmethod
+    def request_stop(cls, report_id: str) -> None:
+        with cls._events_lock:
+            if report_id not in cls._cancellation_events:
+                cls._cancellation_events[report_id] = threading.Event()
+            cls._cancellation_events[report_id].set()
+
+    @classmethod
+    def clear_stop(cls, report_id: str) -> None:
+        with cls._events_lock:
+            if report_id not in cls._cancellation_events:
+                cls._cancellation_events[report_id] = threading.Event()
+            cls._cancellation_events[report_id].clear()
+
+    @classmethod
+    def get_cancellation_event(cls, report_id: str) -> threading.Event:
+        with cls._events_lock:
+            if report_id not in cls._cancellation_events:
+                cls._cancellation_events[report_id] = threading.Event()
+            return cls._cancellation_events[report_id]
+
     @classmethod
     def _ensure_reports_dir(cls):
         """确保报告根目录存在"""
@@ -2517,7 +2592,7 @@ class ReportManager:
         return None
     
     @classmethod
-    def list_reports(cls, simulation_id: Optional[str] = None, limit: int = 50) -> List[Report]:
+    def list_reports(cls, simulation_id: Optional[str] = None, limit: int = 20) -> List[Report]:
         """列出报告"""
         cls._ensure_reports_dir()
         
