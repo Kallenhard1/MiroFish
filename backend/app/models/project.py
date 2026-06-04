@@ -48,7 +48,8 @@ class Project:
     simulation_requirement: Optional[str] = None
     chunk_size: int = 500
     chunk_overlap: int = 50
-    
+    limits: Dict[str, Any] = field(default_factory=dict)
+
     # 错误信息
     error: Optional[str] = None
     
@@ -69,7 +70,8 @@ class Project:
             "simulation_requirement": self.simulation_requirement,
             "chunk_size": self.chunk_size,
             "chunk_overlap": self.chunk_overlap,
-            "error": self.error
+            "error": self.error,
+            "limits": self.limits
         }
     
     @classmethod
@@ -78,7 +80,7 @@ class Project:
         status = data.get('status', 'created')
         if isinstance(status, str):
             status = ProjectStatus(status)
-        
+
         return cls(
             project_id=data['project_id'],
             name=data.get('name', 'Unnamed Project'),
@@ -94,7 +96,8 @@ class Project:
             simulation_requirement=data.get('simulation_requirement'),
             chunk_size=data.get('chunk_size', 500),
             chunk_overlap=data.get('chunk_overlap', 50),
-            error=data.get('error')
+            error=data.get('error'),
+            limits=data.get('limits', {})
         )
 
 
@@ -195,7 +198,7 @@ class ProjectManager:
         return Project.from_dict(data)
     
     @classmethod
-    def list_projects(cls, limit: int = 50) -> List[Project]:
+    def list_projects(cls, limit: int = 20) -> List[Project]:
         """
         列出所有项目
         
