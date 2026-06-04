@@ -357,7 +357,7 @@ def list_reports():
     
     Query参数：
         simulation_id: 按模拟ID过滤（可选）
-        limit: 返回数量限制（默认50）
+        limit: 返回数量限制（默认20）
     
     返回：
         {
@@ -368,7 +368,7 @@ def list_reports():
     """
     try:
         simulation_id = request.args.get('simulation_id')
-        limit = request.args.get('limit', 50, type=int)
+        limit = request.args.get('limit', 20, type=int)
         
         reports = ReportManager.list_reports(
             simulation_id=simulation_id,
@@ -1013,3 +1013,156 @@ def get_graph_statistics_tool():
             "error": str(e),
             "traceback": traceback.format_exc()
         }), 500
+
+
+# ============== Report control: stop / resume / reset ==============
+
+@report_bp.route('/<report_id>/stop', methods=['POST'])
+def stop_report(report_id: str):
+    """Request cooperative cancellation of a running report generation."""
+    try:
+        ReportManager.request_stop(report_id)
+        return jsonify({"success": True, "message": f"Stop requested for {report_id}"})
+    except Exception as e:
+        logger.error(f"stop_report failed: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/resume', methods=['POST'])
+def resume_report(report_id: str):
+    """Resume a cancelled report from the last completed section."""
+    import threading as _threading
+    try:
+        ReportManager.clear_stop(report_id)
+
+        report = ReportManager.get_report(report_id)
+        if not report:
+            return jsonify({"success": False, "error": f"Report not found: {report_id}"}), 404
+
+        completed_sections = ReportManager.get_generated_sections(report_id)
+        start_section_index = len(completed_sections)
+        message = "Starting from beginning" if start_section_index == 0 else f"Resuming from section {start_section_index + 1}"
+
+        manager = SimulationManager()
+        state = manager.get_simulation(report.simulation_id)
+        if not state:
+            return jsonify({"success": False, "error": f"Simulation not found: {report.simulation_id}"}), 404
+
+        project = ProjectManager.get_project(state.project_id)
+        if not project:
+            return jsonify({"success": False, "error": f"Project not found: {state.project_id}"}), 404
+
+        graph_id = state.graph_id or project.graph_id
+        task_manager = TaskManager()
+        task_id = task_manager.create_task(
+            task_type="report_resume",
+            metadata={"report_id": report_id, "start_section": start_section_index}
+        )
+
+        def run_resume():
+            try:
+                task_manager.update_task(task_id, status=TaskStatus.PROCESSING, progress=0, message=message)
+                agent = ReportAgent(
+                    graph_id=graph_id,
+                    simulation_id=report.simulation_id,
+                    simulation_requirement=report.simulation_requirement,
+                )
+                def progress_callback(stage, progress, msg):
+                    task_manager.update_task(task_id, progress=progress, message=f"[{stage}] {msg}")
+                resumed = agent.generate_report(
+                    progress_callback=progress_callback,
+                    report_id=report_id,
+                    start_section_index=start_section_index,
+                )
+                ReportManager.save_report(resumed)
+                task_manager.complete_task(task_id, result={"report_id": report_id, "status": resumed.status.value})
+            except Exception as ex:
+                logger.error(f"resume_report background failed: {ex}")
+                task_manager.fail_task(task_id, str(ex))
+
+        t = _threading.Thread(target=run_resume, daemon=True)
+        t.start()
+
+        return jsonify({
+            "success": True,
+            "data": {"report_id": report_id, "task_id": task_id, "message": message}
+        })
+
+    except Exception as e:
+        logger.error(f"resume_report failed: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@report_bp.route('/<report_id>/reset', methods=['POST'])
+def reset_report(report_id: str):
+    """Delete all section files and regenerate report from scratch."""
+    import threading as _threading
+    import glob as _glob
+    try:
+        ReportManager.clear_stop(report_id)
+
+        report = ReportManager.get_report(report_id)
+        if not report:
+            return jsonify({"success": False, "error": f"Report not found: {report_id}"}), 404
+
+        report_folder = ReportManager._get_report_folder(report_id)
+        for section_file in _glob.glob(os.path.join(report_folder, 'section_*.md')):
+            os.remove(section_file)
+        outline_path = ReportManager._get_outline_path(report_id)
+        if os.path.exists(outline_path):
+            os.remove(outline_path)
+
+        report.status = ReportStatus.PENDING
+        report.outline = None
+        report.markdown_content = ""
+        report.error = None
+        report.completed_at = ""
+        ReportManager.save_report(report)
+
+        manager = SimulationManager()
+        state = manager.get_simulation(report.simulation_id)
+        if not state:
+            return jsonify({"success": False, "error": f"Simulation not found: {report.simulation_id}"}), 404
+
+        project = ProjectManager.get_project(state.project_id)
+        if not project:
+            return jsonify({"success": False, "error": f"Project not found: {state.project_id}"}), 404
+
+        graph_id = state.graph_id or project.graph_id
+        task_manager = TaskManager()
+        task_id = task_manager.create_task(
+            task_type="report_reset",
+            metadata={"report_id": report_id}
+        )
+
+        def run_reset():
+            try:
+                task_manager.update_task(task_id, status=TaskStatus.PROCESSING, progress=0, message="Regenerating from scratch...")
+                agent = ReportAgent(
+                    graph_id=graph_id,
+                    simulation_id=report.simulation_id,
+                    simulation_requirement=report.simulation_requirement,
+                )
+                def progress_callback(stage, progress, msg):
+                    task_manager.update_task(task_id, progress=progress, message=f"[{stage}] {msg}")
+                regenerated = agent.generate_report(
+                    progress_callback=progress_callback,
+                    report_id=report_id,
+                )
+                ReportManager.save_report(regenerated)
+                task_manager.complete_task(task_id, result={"report_id": report_id, "status": regenerated.status.value})
+            except Exception as ex:
+                logger.error(f"reset_report background failed: {ex}")
+                task_manager.fail_task(task_id, str(ex))
+
+        t = _threading.Thread(target=run_reset, daemon=True)
+        t.start()
+
+        return jsonify({
+            "success": True,
+            "data": {"report_id": report_id, "task_id": task_id, "message": "Regenerating from scratch"}
+        })
+
+    except Exception as e:
+        logger.error(f"reset_report failed: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500

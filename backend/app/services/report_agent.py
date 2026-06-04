@@ -1543,9 +1543,10 @@ class ReportAgent:
         return final_answer
     
     def generate_report(
-        self, 
+        self,
         progress_callback: Optional[Callable[[str, int, str], None]] = None,
-        report_id: Optional[str] = None
+        report_id: Optional[str] = None,
+        start_section_index: int = 0,
     ) -> Report:
         """
         生成完整报告（分章节实时输出）
@@ -1651,6 +1652,16 @@ class ReportAgent:
             
             for i, section in enumerate(outline.sections):
                 section_num = i + 1
+
+                # Skip already-completed sections when resuming
+                if i < start_section_index:
+                    section_path = ReportManager._get_section_path(report_id, section_num)
+                    if os.path.exists(section_path):
+                        with open(section_path, 'r', encoding='utf-8') as _f:
+                            section.content = _f.read()
+                        generated_sections.append(f"## {section.title}\n\n{section.content}")
+                        completed_section_titles.append(section.title)
+                    continue
 
                 # Cooperative cancellation check
                 cancellation_event = ReportManager.get_cancellation_event(report_id)
