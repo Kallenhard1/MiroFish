@@ -39,6 +39,9 @@ class Config:
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '../uploads')
     ALLOWED_EXTENSIONS = {'pdf', 'md', 'txt', 'markdown'}
+
+    # SQLite index database (hybrid: files authoritative for content, DB indexes status/tasks)
+    DB_PATH = os.path.join(os.path.dirname(__file__), '../uploads/mirofish.db')
     
     # Text processing configuration
     DEFAULT_CHUNK_SIZE = 500  # default chunk size
