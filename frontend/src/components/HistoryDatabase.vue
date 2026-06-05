@@ -13,7 +13,7 @@
     <!-- 标题区域 -->
     <div class="section-header">
       <div class="section-line"></div>
-      <span class="section-title">推演记录</span>
+      <span class="section-title">{{ t('history.title') }}</span>
       <div class="section-line"></div>
     </div>
 
@@ -50,6 +50,20 @@
           </div>
         </div>
 
+        <!-- 状态标签 -->
+        <div
+          class="status-badge"
+          :class="[`status-${project.status}`, { 'is-active': !['done','failed','cancelled','budget_exceeded'].includes(project.status) }]"
+        >
+          <span v-if="project.status === 'building'">{{ t('history.statusBuilding') }}</span>
+          <span v-else-if="project.status === 'simulating'">{{ t('history.statusSimulating') }}</span>
+          <span v-else-if="project.status === 'reporting'">{{ t('history.statusReporting') }}</span>
+          <span v-else-if="project.status === 'done'">{{ t('history.statusDone') }}</span>
+          <span v-else-if="project.status === 'failed'">{{ t('history.statusFailed') }}</span>
+          <span v-else-if="project.status === 'cancelled'">{{ t('history.statusCancelled') }}</span>
+          <span v-else>{{ project.status }}</span>
+        </div>
+
         <!-- 文件列表区域 -->
         <div class="card-files-wrapper">
           <!-- 角落装饰 - 取景框风格 -->
@@ -67,13 +81,13 @@
             </div>
             <!-- 如果有更多文件，显示提示 -->
             <div v-if="project.files.length > 3" class="files-more">
-              +{{ project.files.length - 3 }} 个文件
+              +{{ project.files.length - 3 }} {{ t('history.moreFiles') }}
             </div>
           </div>
           <!-- 无文件时的占位 -->
           <div class="files-empty" v-else>
             <span class="empty-file-icon">◇</span>
-            <span class="empty-file-text">暂无文件</span>
+            <span class="empty-file-text">{{ t('history.noFiles') }}</span>
           </div>
         </div>
 
@@ -94,9 +108,21 @@
           </span>
         </div>
         
+        <!-- 使用量 footer -->
+        <div class="card-usage" v-if="project.usage && project.usage.total_tokens > 0">
+          <span>{{ project.usage.total_tokens.toLocaleString() }} tokens</span>
+          <span class="usage-cost">${{ project.usage.estimated_cost_usd }}</span>
+        </div>
+
         <!-- 底部装饰线 (hover时展开) -->
         <div class="card-bottom-line"></div>
       </div>
+    </div>
+
+    <!-- 空状态 -->
+    <div v-if="!projects || projects.length === 0" class="empty-state">
+      <p>{{ t('history.noProjects') }}</p>
+      <p class="empty-hint">{{ t('history.startFirst') }}</p>
     </div>
 
     <!-- 加载状态 -->
@@ -194,6 +220,9 @@
 import { ref, computed, onMounted, onUnmounted, onActivated, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getSimulationHistory } from '../api/simulation'
+import { useLocale } from '../composables/useLocale.js'
+
+const { t } = useLocale()
 
 const router = useRouter()
 const route = useRoute()
@@ -391,9 +420,14 @@ const truncateFilename = (filename, maxLength) => {
   return truncatedName + ext
 }
 
-// 打开项目详情弹窗
-const navigateToProject = (simulation) => {
-  selectedProject.value = simulation
+// 智能路由导航：完成/报告中直接跳报告页，否则跳项目流程页
+function navigateToProject(project) {
+  const status = project.status
+  if ((status === 'done' || status === 'reporting') && project.report_id) {
+    router.push({ path: `/report/${project.report_id}` })
+  } else {
+    router.push({ name: 'Process', params: { projectId: project.project_id } })
+  }
 }
 
 // 关闭弹窗
@@ -434,21 +468,29 @@ const goToReport = () => {
   }
 }
 
-// 加载历史项目
-const loadHistory = async () => {
+// 加载历史项目（带轮询）
+const TERMINAL_STATUSES = ['done', 'failed', 'cancelled', 'budget_exceeded', 'completed']
+let pollTimer = null
+
+async function loadProjects() {
   try {
-    loading.value = true
-    const response = await getSimulationHistory(20)
-    if (response.success) {
-      projects.value = response.data || []
+    const res = await fetch('/api/graph/project/list')
+    const json = await res.json()
+    if (json.success) {
+      projects.value = json.data
+      loading.value = false
     }
-  } catch (error) {
-    console.error('加载历史项目失败:', error)
-    projects.value = []
-  } finally {
-    loading.value = false
-  }
+    // stop polling if all projects are in terminal status
+    const hasActive = (json.data || []).some(p => !TERMINAL_STATUSES.includes(p.status))
+    if (!hasActive && pollTimer) {
+      clearInterval(pollTimer)
+      pollTimer = null
+    }
+  } catch { /* ignore */ }
 }
+
+// Keep old name as alias so onActivated / watch still work
+const loadHistory = loadProjects
 
 // 初始化 IntersectionObserver
 const initObserver = () => {
@@ -541,8 +583,9 @@ watch(() => route.path, (newPath) => {
 onMounted(async () => {
   // 确保 DOM 渲染完成后再加载数据
   await nextTick()
-  await loadHistory()
-  
+  await loadProjects()
+  pollTimer = setInterval(loadProjects, 5000)
+
   // 等待 DOM 渲染后初始化观察器
   setTimeout(() => {
     initObserver()
@@ -564,6 +607,11 @@ onUnmounted(() => {
   if (expandDebounceTimer) {
     clearTimeout(expandDebounceTimer)
     expandDebounceTimer = null
+  }
+  // 清理轮询定时器
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
   }
 })
 </script>
@@ -1337,4 +1385,39 @@ onUnmounted(() => {
   text-align: center;
   line-height: 1.5;
 }
+
+/* ===== 状态标签 ===== */
+.status-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border: 1px solid currentColor;
+  display: inline-block;
+  margin-top: 4px;
+}
+.is-active { animation: pulse-status 1.5s ease-in-out infinite; }
+@keyframes pulse-status {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.status-done { color: #10b981; }
+.status-building, .status-simulating, .status-reporting { color: #f59e0b; }
+.status-failed, .status-cancelled { color: #ef4444; }
+
+/* ===== 使用量 footer ===== */
+.card-usage {
+  display: flex;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: #999;
+  padding: 6px 0 2px;
+  border-top: 1px solid #eee;
+  margin-top: 8px;
+}
+.usage-cost { color: #666; }
+
+/* ===== 空状态（覆盖已有样式，增加子项样式） ===== */
+.empty-state { text-align: center; padding: 40px; color: #999; }
+.empty-hint { font-size: 0.85rem; margin-top: 8px; }
 </style>
