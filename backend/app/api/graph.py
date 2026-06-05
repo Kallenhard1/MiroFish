@@ -53,16 +53,81 @@ def get_project(project_id: str):
 
 @graph_bp.route('/project/list', methods=['GET'])
 def list_projects():
-    """
-    列出所有项目
-    """
+    """List all projects, enriched with simulation status and usage data."""
+    from ..services.simulation_manager import SimulationManager
+    from ..services.simulation_runner import SimulationRunner
+    from ..services.report_agent import ReportManager
+    from ..services.usage_tracker import UsageTracker
+
     limit = request.args.get('limit', 20, type=int)
     projects = ProjectManager.list_projects(limit=limit)
-    
+
+    result = []
+    sim_manager = SimulationManager()
+
+    for project in projects:
+        item = project.to_dict()
+
+        # Find most-recent simulation for this project
+        simulations = sim_manager.list_simulations(project_id=project.project_id)
+        sim = simulations[0] if simulations else None
+
+        item['simulation_id'] = sim.simulation_id if sim else None
+
+        # Find report for that simulation
+        report_id = None
+        if sim:
+            report = ReportManager.get_report_by_simulation(sim.simulation_id)
+            report_id = report.report_id if report else None
+        item['report_id'] = report_id
+
+        # Derive unified status string
+        if sim:
+            run_state = SimulationRunner.get_run_state(sim.simulation_id) if sim else None
+            sim_status = sim.status.value if hasattr(sim.status, 'value') else str(sim.status)
+            if run_state and getattr(run_state, 'runner_status', None):
+                runner_status = run_state.runner_status.value
+            else:
+                runner_status = 'idle'
+
+            if runner_status == 'running':
+                derived_status = 'simulating'
+            elif report_id:
+                report_obj = ReportManager.get_report(report_id)
+                rep_status = report_obj.status.value if report_obj else 'unknown'
+                if rep_status == 'generating':
+                    derived_status = 'reporting'
+                elif rep_status == 'completed':
+                    derived_status = 'done'
+                elif rep_status in ('cancelled', 'budget_exceeded', 'failed'):
+                    derived_status = rep_status
+                else:
+                    derived_status = sim_status
+            elif sim_status in ('preparing', 'ready', 'running', 'paused', 'completed'):
+                derived_status = 'simulating' if sim_status in ('preparing', 'running') else sim_status
+            elif project.status.value == 'graph_building':
+                derived_status = 'building'
+            else:
+                derived_status = project.status.value
+        else:
+            status_map = {
+                'graph_building': 'building',
+                'graph_completed': 'building',
+                'ontology_generated': 'building',
+            }
+            derived_status = status_map.get(project.status.value, project.status.value)
+
+        item['status'] = derived_status
+
+        # Usage data
+        item['usage'] = UsageTracker.get_usage(project.project_id)
+
+        result.append(item)
+
     return jsonify({
         "success": True,
-        "data": [p.to_dict() for p in projects],
-        "count": len(projects)
+        "data": result,
+        "count": len(result)
     })
 
 
