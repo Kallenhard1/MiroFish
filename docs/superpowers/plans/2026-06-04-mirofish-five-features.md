@@ -62,7 +62,7 @@ const MAPS = { zh, en }
 const locale = ref(localStorage.getItem('mirofish_locale') || 'zh')
 
 export function useLocale() {
-  const t = (key) => MAPS[locale.value]?.[key] ?? key
+  const t = (key) => MAPS[locale.value][key] || key
   const setLocale = (lang) => {
     locale.value = lang
     localStorage.setItem('mirofish_locale', lang)
@@ -77,44 +77,44 @@ export function useLocale() {
 // frontend/src/locales/zh.js
 export default {
   // nav
-  'nav.github': '访问我们的Github主页',
+  'nav.github': 'Visit our GitHub homepage',
   // home hero
-  'home.tag': '简洁通用的群体智能引擎',
-  'home.version': '/ v0.1-预览版',
-  'home.titleLine1': '上传任意报告',
-  'home.titleLine2': '即刻推演未来',
-  'home.heroDesc1': '即使只有一段文字，MiroFish 也能基于其中的现实种子，全自动生成与之对应的至多百万级Agent构成的平行世界。通过上帝视角注入变量，在复杂的群体交互中寻找动态环境下的"局部最优解"',
-  'home.heroDesc2': '让未来在 Agent 群中预演，让决策在百战后胜出',
+  'home.tag': 'Simple universal swarm intelligence engine',
+  'home.version': '/ v0.1-preview',
+  'home.titleLine1': 'Upload any report',
+  'home.titleLine2': 'Simulate the future instantly',
+  'home.heroDesc1': 'Even from a single paragraph, MiroFish can use its real-world seeds to automatically generate a corresponding parallel world with up to millions of Agents. Inject variables from a God's-eye view to find dynamic local optima in complex group interactions.',
+  'home.heroDesc2': 'Let the future rehearse among Agents; let decisions win after many simulations',
   // home left panel
-  'home.systemStatus': '系统状态',
-  'home.ready': '准备就绪',
-  'home.readyDesc': '预测引擎待命中，可上传多份非结构化数据以初始化模拟序列',
-  'home.lowCost': '低成本',
-  'home.lowCostDesc': '常规模拟平均5$/次',
-  'home.highAvail': '高可用',
-  'home.highAvailDesc': '最多百万级Agent模拟',
-  'home.workflowSeq': '工作流序列',
-  'home.step1Title': '图谱构建',
-  'home.step1Desc': '现实种子提取 & 个体与群体记忆注入 & GraphRAG构建',
-  'home.step2Title': '环境搭建',
-  'home.step2Desc': '实体关系抽取 & 人设生成 & 环境配置Agent注入仿真参数',
-  'home.step3Title': '开始模拟',
-  'home.step3Desc': '双平台并行模拟 & 自动解析预测需求 & 动态更新时序记忆',
-  'home.step4Title': '报告生成',
-  'home.step4Desc': 'ReportAgent拥有丰富的工具集与模拟后环境进行深度交互',
-  'home.step5Title': '深度互动',
-  'home.step5Desc': '与模拟世界中的任意一位进行对话 & 与ReportAgent进行对话',
+  'home.systemStatus': 'System Status',
+  'home.ready': 'Ready',
+  'home.readyDesc': 'Prediction engine standing by; upload multiple unstructured files to initialize the simulation sequence',
+  'home.lowCost': 'Low Cost',
+  'home.lowCostDesc': 'Regular simulations average $5 each',
+  'home.highAvail': 'High Availability',
+  'home.highAvailDesc': 'Up to million-Agent simulation',
+  'home.workflowSeq': 'Workflow Sequence',
+  'home.step1Title': 'Graph Building',
+  'home.step1Desc': 'Real-world seed extraction & individual and collective memory injection & GraphRAG construction',
+  'home.step2Title': 'Environment Setup',
+  'home.step2Desc': 'Entity relationship extraction & persona generation & environment configuration Agent injects simulation parameters',
+  'home.step3Title': 'Start Simulation',
+  'home.step3Desc': 'Dual-platform parallel simulation & automatic parsing of prediction requirements & dynamic temporal memory updates',
+  'home.step4Title': 'Report Generation',
+  'home.step4Desc': 'ReportAgent has a rich toolset for deep interaction with the post-simulation environment',
+  'home.step5Title': 'Deep Interaction',
+  'home.step5Desc': 'Chat with anyone in the simulated world & chat with ReportAgent',
   // home console
-  'home.seedLabel': '01 / 现实种子',
-  'home.seedFormats': '支持格式: PDF, MD, TXT',
-  'home.uploadDrag': '拖拽文件上传',
-  'home.uploadClick': '或点击浏览文件系统',
-  'home.promptLabel': '>_ 02 / 模拟提示词',
-  'home.promptPlaceholder': '// 用自然语言输入模拟或预测需求（例.武大若发布撤销肖某处分的公告，会引发什么舆情走向）',
-  'home.engineBadge': '引擎: MiroFish-V1.0',
-  'home.startEngine': '启动引擎',
-  'home.initializing': '初始化中...',
-  'home.inputParams': '输入参数',
+  'home.seedLabel': '01 / Real-world Seeds',
+  'home.seedFormats': 'Supported formats: PDF, MD, TXT',
+  'home.uploadDrag': 'Drag files to upload',
+  'home.uploadClick': 'or click to browse files',
+  'home.promptLabel': '>_ 02 / Simulation Prompt',
+  'home.promptPlaceholder': '// Enter simulation or prediction requirements in natural language (e.g., if a university announces it will revoke a disciplinary action, what public opinion trend will follow?)',
+  'home.engineBadge': 'Engine: MiroFish-V1.0',
+  'home.startEngine': 'Start Engine',
+  'home.initializing': 'Initializing...',
+  'home.inputParams': 'Input Parameters',
   // home advanced limits
   'home.advancedSettings': '▸ Advanced Settings',
   'home.advancedSettingsOpen': '▾ Advanced Settings',
@@ -124,33 +124,33 @@ export default {
   'home.maxLlmCalls': 'Max LLM calls',
   'home.limitsHitWarning': 'Graph build hit a size limit — results are partial.',
   // history
-  'history.title': '推演记录',
-  'history.noFiles': '暂无文件',
-  'history.moreFiles': '个文件',
-  'history.noProjects': '暂无推演记录',
-  'history.startFirst': '在上方启动第一个推演',
-  'history.statusBuilding': '构建图谱中...',
-  'history.statusSimulating': '运行模拟中...',
-  'history.statusReporting': '生成报告中...',
-  'history.statusDone': '已完成',
-  'history.statusFailed': '失败',
-  'history.statusCancelled': '已取消',
+  'history.title': 'Simulation History',
+  'history.noFiles': 'No files yet',
+  'history.moreFiles': 'files',
+  'history.noProjects': 'No simulations yet',
+  'history.startFirst': 'Start your first simulation above',
+  'history.statusBuilding': 'Building graph...',
+  'history.statusSimulating': 'Running simulation...',
+  'history.statusReporting': 'Generating report...',
+  'history.statusDone': 'Completed',
+  'history.statusFailed': 'Failed',
+  'history.statusCancelled': 'Cancelled',
   // process
   'process.navTitle': 'MIROFISH',
-  'process.graphPanel': '实时知识图谱',
-  'process.nodes': '节点',
-  'process.relations': '关系',
+  'process.graphPanel': 'Real-time Knowledge Graph',
+  'process.nodes': 'Nodes',
+  'process.relations': 'Relations',
   // report step
-  'report.stop': '停止生成',
-  'report.resume': '继续生成',
-  'report.reset': '重新生成',
-  'report.resetConfirm': '确认重新生成？这会删除已完成的章节。',
-  'report.generating': '正在生成',
-  'report.waitingAgent': '等待 Report Agent...',
+  'report.stop': 'Stop Generating',
+  'report.resume': 'Resume Generating',
+  'report.reset': 'Regenerate',
+  'report.resetConfirm': 'Confirm reset? This will delete completed sections.',
+  'report.generating': 'Generating',
+  'report.waitingAgent': 'Waiting for Report Agent...',
   // usage counter
-  'usage.tokens': '令牌',
-  'usage.cost': '估计费用',
-  'usage.calls': '调用次数',
+  'usage.tokens': 'Tokens',
+  'usage.cost': 'Estimated Cost',
+  'usage.calls': 'Calls',
 }
 ```
 
@@ -227,7 +227,7 @@ export default {
   'report.stop': 'Stop',
   'report.resume': 'Resume',
   'report.reset': 'Reset',
-  'report.resetConfirm': 'Confirm reset? This will delete completed sections.',
+  'report.resetConfirm': 'Confirm resetor This will delete completed sections.',
   'report.generating': 'Generating',
   'report.waitingAgent': 'Waiting for Report Agent...',
   // usage counter
@@ -263,7 +263,7 @@ Replace the entire `App.vue` with:
 <template>
   <router-view />
   <button class="locale-toggle" @click="setLocale(locale === 'zh' ? 'en' : 'zh')">
-    {{ locale === 'zh' ? 'EN' : '中' }}
+    {{ locale === 'zh' ? 'EN' : 'ZH' }}
   </button>
 </template>
 
@@ -323,7 +323,7 @@ button { font-family: inherit; }
 cd /home/mario/Dev/MiroFish/frontend && npm run dev
 ```
 
-Open `http://localhost:5173`. A small `EN` button should be fixed at the bottom-right. Clicking it should change to `中`. Refreshing should remember the choice.
+Open `http://localhost:5173`. A small `EN` button should be fixed at the bottom-right. Clicking it should change to `ZH`. Refreshing should remember the choice.
 
 - [ ] **Step 3: Commit**
 
@@ -562,7 +562,7 @@ class LLMClient:
         self.project_id = project_id
 
         if not self.api_key:
-            raise ValueError("LLM_API_KEY 未配置")
+            raise ValueError("LLM_API_KEY is not configured")
 
         self.client = OpenAI(
             api_key=self.api_key,
@@ -604,7 +604,7 @@ class LLMClient:
         response = self.client.chat.completions.create(**kwargs)
         self._record_usage(response)
         content = response.choices[0].message.content
-        content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
+        content = re.sub(r'<think>[\s\S]*or</think>', '', content).strip()
         return content
 
     def chat_json(
@@ -620,8 +620,8 @@ class LLMClient:
             response_format={"type": "json_object"},
         )
         cleaned = response.strip()
-        cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned, flags=re.IGNORECASE)
-        cleaned = re.sub(r'\n?```\s*$', '', cleaned).strip()
+        cleaned = re.sub(r'^```(?::json)?\s*\n', '', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\n```\s*$', '', cleaned).strip()
         try:
             return json.loads(cleaned)
         except json.JSONDecodeError:
@@ -749,7 +749,7 @@ This task adds three things to `report_agent.py`:
 Change:
 ```python
 class ReportStatus(str, Enum):
-    """报告状态"""
+    """Report status"""
     PENDING = "pending"
     PLANNING = "planning"
     GENERATING = "generating"
@@ -759,7 +759,7 @@ class ReportStatus(str, Enum):
 To:
 ```python
 class ReportStatus(str, Enum):
-    """报告状态"""
+    """Report status"""
     PENDING = "pending"
     PLANNING = "planning"
     GENERATING = "generating"
@@ -843,8 +843,8 @@ Add the cancellation and budget check at the start of the loop body (right after
                     ReportManager.save_report(report)
                     ReportManager.update_progress(
                         report_id, "cancelled", 
-                        20 + int((i / len(outline.sections)) * 70),
-                        "已停止生成",
+                    20 + int((i / len(outline.sections)) * 70),
+                    "Stopped by user request",
                         completed_sections=completed_section_titles
                     )
                     raise CancellationError("Stopped by user request")
@@ -890,7 +890,7 @@ Find the `except Exception as e:` block at the end of `generate_report()` (aroun
             if progress_callback:
                 progress_callback("cancelled", 
                     20 + int((len(completed_section_titles) / max(len(outline.sections if report.outline else [1]), 1)) * 70),
-                    "已停止生成")
+                    "Stopped generating")
             return report
         
         except BudgetExceededError:
@@ -898,7 +898,7 @@ Find the `except Exception as e:` block at the end of `generate_report()` (aroun
             if progress_callback:
                 progress_callback("budget_exceeded", 
                     20 + int((len(completed_section_titles) / max(len(outline.sections if report.outline else [1]), 1)) * 70),
-                    "LLM调用次数已达上限")
+                    "LLM call budget exhausted")
             return report
         
         except Exception as e:
@@ -1078,7 +1078,7 @@ def reset_report(report_id: str):
 
         def run_reset():
             try:
-                task_manager.update_task(task_id, status=TaskStatus.PROCESSING, progress=0, message="Regenerating report from scratch...")
+                task_manager.update_task(task_id, status=TaskStatus.PROCESSING, progress=0, message="Regenerating report from scratch")
                 agent = ReportAgent(
                     graph_id=graph_id,
                     simulation_id=report.simulation_id,
@@ -1215,7 +1215,7 @@ Then in the task completion call, add `limits_hit` to the result:
                 task_manager.update_task(
                     task_id,
                     status=TaskStatus.COMPLETED,
-                    message="图谱构建完成",
+                    message="Graph building completed",
                     progress=100,
                     result={
                         "project_id": project_id,
@@ -1567,17 +1567,17 @@ const startSimulation = () => {
 ```
 
 In the template, replace the hardcoded Chinese strings with `t('...')` calls (using the keys from Task 1). For example:
-- `访问我们的Github主页` → `{{ t('nav.github') }}`
-- `启动引擎` → `{{ t('home.startEngine') }}`
-- `初始化中...` → `{{ t('home.initializing') }}`
+- `Visit our GitHub homepage` → `{{ t('nav.github') }}`
+- `Start Engine` → `{{ t('home.startEngine') }}`
+- `Initializing...` → `{{ t('home.initializing') }}`
 
-Add the advanced settings panel **inside `.console-box`** right before the `<!-- 启动按钮 -->` section:
+Add the advanced settings panel **inside `.console-box`** right before the `<!-- Start button -->` section:
 
 ```html
 <!-- Advanced Settings toggle -->
 <div class="console-section advanced-section">
   <button class="advanced-toggle" @click="showAdvanced = !showAdvanced">
-    {{ showAdvanced ? t('home.advancedSettingsOpen') : t('home.advancedSettings') }}
+    {{ showAdvanced or t('home.advancedSettingsOpen') : t('home.advancedSettings') }}
   </button>
   <div v-if="showAdvanced" class="limits-grid">
     <label class="limit-label">
@@ -1654,7 +1654,7 @@ Add styles to `<style scoped>`:
 cd /home/mario/Dev/MiroFish/frontend && npm run dev
 ```
 
-Open `http://localhost:5173`. Click "▸ Advanced Settings" — four number inputs should appear. Change values. Click "启动引擎" with a file and requirement — should navigate to Process page.
+Open `http://localhost:5173`. Click "▸ Advanced Settings" — four number inputs should appear. Change values. Click "Start Engine" with a file and requirement — should navigate to Process page.
 
 - [ ] **Step 4: Commit**
 
@@ -1701,7 +1701,7 @@ Find where `reportStatus` or report `status` is tracked in the component. If not
 ```js
 const reportStatus = computed(() => {
   // read from the existing report polling logic
-  return props.reportData?.status ?? 'pending'
+  return props.reportData?.status || 'pending'
 })
 ```
 
@@ -1770,7 +1770,7 @@ Add styles:
 .ctrl-reset:hover { background: #f3f4f6; }
 ```
 
-Also replace the Chinese string `正在生成{{ section.title }}...` with:
+Also replace the Chinese string `Generating{{ section.title }}...` with:
 ```html
 <span class="loading-text">{{ t('report.generating') }} {{ section.title }}...</span>
 ```
@@ -1927,7 +1927,7 @@ Add styles:
 .empty-hint { font-size: 0.85rem; margin-top: 8px; }
 ```
 
-Also replace `推演记录` with `{{ t('history.title') }}` and `暂无文件` with `{{ t('history.noFiles') }}`.
+Also replace `Simulation History` with `{{ t('history.title') }}` and `No files yet` with `{{ t('history.noFiles') }}`.
 
 - [ ] **Step 6: Verify enriched cards and polling**
 
@@ -1996,9 +1996,9 @@ grep -n '[^\x00-\x7F]' /home/mario/Dev/MiroFish/frontend/src/views/Process.vue |
 ```
 
 For each Chinese string, add its key to `zh.js`/`en.js` (Task 1) and replace with `{{ t('process.xyz') }}`. Key strings to replace:
-- `实时知识图谱` → `{{ t('process.graphPanel') }}`
-- `节点` → `{{ t('process.nodes') }}`
-- `关系` → `{{ t('process.relations') }}`
+- `Real-time Knowledge Graph` → `{{ t('process.graphPanel') }}`
+- `Nodes` → `{{ t('process.nodes') }}`
+- `Relations` → `{{ t('process.relations') }}`
 - Other strings found by the grep above
 
 - [ ] **Step 4: Verify UsageCounter appears on the Process page**
@@ -2063,7 +2063,7 @@ Standard pattern for every file:
 import { useLocale } from '../composables/useLocale.js'  // adjust path if in components/
 const { t } = useLocale()
 ```
-Then replace each hardcoded Chinese string `"中文字符串"` with `t('namespace.key')`.
+Then replace each hardcoded Chinese string `"Chinese string"` with `t('namespace.key')`.
 
 - [ ] **Step 4: Verify no Chinese strings remain in the 9 files**
 
@@ -2088,7 +2088,7 @@ Expected: all counts are 0 (or very close — the regex also matches non-Chinese
 
 - [ ] **Step 5: Do a full UI smoke test**
 
-Start dev server. Toggle locale to EN. Navigate through: Home → start a project → Process page steps → HistoryDatabase. All visible text should switch to English. Toggle back to 中 — all text switches back.
+Start dev server. Toggle locale to EN. Navigate through: Home → start a project → Process page steps → HistoryDatabase. All visible text should switch to English. Toggle back to ZH — all text switches back.
 
 - [ ] **Step 6: Commit**
 

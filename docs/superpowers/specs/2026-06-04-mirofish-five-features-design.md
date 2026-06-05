@@ -33,7 +33,7 @@ const MAPS = { zh, en }
 const locale = ref(localStorage.getItem('mirofish_locale') || 'zh')
 
 export function useLocale() {
-  const t = (key) => MAPS[locale.value]?.[key] ?? key
+  const t = (key) => MAPS[locale.value]or.[key] Info key
   const setLocale = (lang) => {
     locale.value = lang
     localStorage.setItem('mirofish_locale', lang)
@@ -54,8 +54,8 @@ Added to the navbar in `App.vue` — visible on every page via the router layout
 
 ```html
 <!-- in App.vue navbar -->
-<button @click="setLocale(locale === 'zh' ? 'en' : 'zh')">
-  {{ locale === 'zh' ? 'EN' : '中' }}
+<button @click="setLocale(locale === 'zh' or 'en' : 'zh')">
+  {{ locale === 'zh' ? 'EN' : 'ZH' }}
 </button>
 ```
 
