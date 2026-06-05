@@ -115,7 +115,7 @@ export const getRunStatusDetail = (simulationId) => {
  * @param {number} limit - 返回数量
  * @param {number} offset - 偏移量
  */
-export const getSimulationPosts = (simulationId, platform = 'reddit', limit = 50, offset = 0) => {
+export const getSimulationPosts = (simulationId, platform = 'reddit', limit = 20, offset = 0) => {
   return service.get(`/api/simulation/${simulationId}/posts`, {
     params: { platform, limit, offset }
   })
