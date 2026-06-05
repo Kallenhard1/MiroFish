@@ -412,7 +412,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAgentLog, getConsoleLog, stopReport, resumeReport, resetReport } from '../api/report'
+import { getAgentLog, getConsoleLog, getReport, stopReport, resumeReport, resetReport } from '../api/report'
 import { useLocale } from '../composables/useLocale.js'
 
 const { t } = useLocale()
@@ -446,6 +446,7 @@ const expandedContent = ref(new Set())
 const expandedLogs = ref(new Set())
 const collapsedSections = ref(new Set())
 const isComplete = ref(false)
+const backendStatus = ref(null)
 const startTime = ref(null)
 const leftPanel = ref(null)
 const rightPanel = ref(null)
@@ -1724,8 +1725,10 @@ const QuickSearchDisplay = {
 }
 
 // Report status derived from component state
+const TERMINAL_STATUSES = ['completed', 'cancelled', 'failed', 'budget_exceeded']
 const reportStatus = computed(() => {
   if (isComplete.value) return 'completed'
+  if (backendStatus.value && TERMINAL_STATUSES.includes(backendStatus.value)) return backendStatus.value
   if (agentLogs.value.length > 0) return 'generating'
   return 'pending'
 })
@@ -2196,14 +2199,32 @@ const fetchConsoleLog = async () => {
   }
 }
 
+let statusTimer = null
+
+async function fetchBackendStatus() {
+  if (!props.reportId) return
+  try {
+    const res = await getReport(props.reportId)
+    if (res.data?.success && res.data?.data?.status) {
+      backendStatus.value = res.data.data.status
+      if (TERMINAL_STATUSES.includes(backendStatus.value)) {
+        clearInterval(statusTimer)
+        statusTimer = null
+      }
+    }
+  } catch { /* ignore */ }
+}
+
 const startPolling = () => {
   if (agentLogTimer || consoleLogTimer) return
-  
+
   fetchAgentLog()
   fetchConsoleLog()
-  
+  fetchBackendStatus()
+
   agentLogTimer = setInterval(fetchAgentLog, 2000)
   consoleLogTimer = setInterval(fetchConsoleLog, 1500)
+  statusTimer = setInterval(fetchBackendStatus, 4000)
 }
 
 const stopPolling = () => {
@@ -2214,6 +2235,10 @@ const stopPolling = () => {
   if (consoleLogTimer) {
     clearInterval(consoleLogTimer)
     consoleLogTimer = null
+  }
+  if (statusTimer) {
+    clearInterval(statusTimer)
+    statusTimer = null
   }
 }
 
@@ -2242,8 +2267,9 @@ watch(() => props.reportId, (newId) => {
     expandedLogs.value = new Set()
     collapsedSections.value = new Set()
     isComplete.value = false
+    backendStatus.value = null
     startTime.value = null
-    
+
     startPolling()
   }
 }, { immediate: true })
