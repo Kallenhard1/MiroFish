@@ -18,18 +18,22 @@
 
     <!-- 主内容区 -->
     <div class="main-content">
+      <UsageCounter
+        :project-id="projectData?.project_id || currentProjectId"
+        :active="!terminalStatus"
+      />
       <!-- 左侧: 实时图谱展示 -->
       <div class="left-panel" :class="{ 'full-screen': isFullScreen }">
         <div class="panel-header">
           <div class="header-left">
             <span class="header-deco">◆</span>
-            <span class="header-title">实时知识图谱</span>
+            <span class="header-title">{{ t('process.graphPanel') }}</span>
           </div>
           <div class="header-right">
             <template v-if="graphData">
-              <span class="stat-item">{{ graphData.node_count || graphData.nodes?.length || 0 }} 节点</span>
+              <span class="stat-item">{{ graphData.node_count || graphData.nodes?.length || 0 }} {{ t('process.nodes') }}</span>
               <span class="stat-divider">|</span>
-              <span class="stat-item">{{ graphData.edge_count || graphData.edges?.length || 0 }} 关系</span>
+              <span class="stat-item">{{ graphData.edge_count || graphData.edges?.length || 0 }} {{ t('process.relations') }}</span>
               <span class="stat-divider">|</span>
             </template>
             <div class="action-buttons">
@@ -417,6 +421,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { generateOntology, getProject, buildGraph, getTaskStatus, getGraphData } from '../api/graph'
 import { getPendingUpload, clearPendingUpload } from '../store/pendingUpload'
 import * as d3 from 'd3'
+import UsageCounter from '../components/UsageCounter.vue'
+import { useLocale } from '../composables/useLocale.js'
+const { t } = useLocale()
 
 const route = useRoute()
 const router = useRouter()
@@ -435,6 +442,10 @@ const ontologyProgress = ref(null) // 本体生成进度
 const currentPhase = ref(-1) // -1: 上传中, 0: 本体生成中, 1: 图谱构建, 2: 完成
 const selectedItem = ref(null) // 选中的节点或边
 const isFullScreen = ref(false)
+
+const terminalStatus = computed(() =>
+  ['done', 'failed', 'cancelled', 'completed'].includes(projectData.value?.status)
+)
 
 // DOM引用
 const graphContainer = ref(null)
@@ -585,7 +596,12 @@ const handleNewProject = async () => {
       formDataObj.append('files', file)
     })
     formDataObj.append('simulation_requirement', pending.simulationRequirement)
-    
+    const limits = pending.limits || {}
+    if (limits.max_nodes) formDataObj.append('max_nodes', limits.max_nodes)
+    if (limits.max_relations) formDataObj.append('max_relations', limits.max_relations)
+    if (limits.max_personas) formDataObj.append('max_personas', limits.max_personas)
+    if (limits.max_llm_calls) formDataObj.append('max_llm_calls', limits.max_llm_calls)
+
     // 调用本体生成 API
     const response = await generateOntology(formDataObj)
     
