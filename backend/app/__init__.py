@@ -61,7 +61,13 @@ def create_app(config_class=Config):
         logger = get_logger('mirofish.request')
         logger.debug(f"Response: {response.status_code}")
         return response
-    
+
+    # Initialize the SQLite index DB (schema + crash recovery) before serving
+    from .db.bootstrap import init_db
+    init_db(app)
+    if should_log_startup:
+        logger.info("Database index initialized")
+
     # Register blueprints
     from .api import graph_bp, simulation_bp, report_bp, usage_bp
     app.register_blueprint(graph_bp, url_prefix='/api/graph')

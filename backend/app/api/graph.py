@@ -444,7 +444,10 @@ def build_graph():
         
         # Create async task
         task_manager = TaskManager()
-        task_id = task_manager.create_task(f"Build graph: {graph_name}")
+        task_id = task_manager.create_task(
+            "graph_build",
+            metadata={"label": f"Build graph: {graph_name}", "project_id": project_id},
+        )
         logger.info(f"Created graph build task: task_id={task_id}, project_id={project_id}")
         
         # Update project status
@@ -642,10 +645,10 @@ def list_tasks():
     List all tasks
     """
     tasks = TaskManager().list_tasks()
-    
+
     return jsonify({
         "success": True,
-        "data": [t.to_dict() for t in tasks],
+        "data": tasks,
         "count": len(tasks)
     })
 
