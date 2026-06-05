@@ -58,7 +58,7 @@
                       <path d="M12 2a10 10 0 0 1 10 10" stroke-width="4" stroke="#4B5563" stroke-linecap="round"></path>
                     </svg>
                   </div>
-                  <span class="loading-text">正在生成{{ section.title }}...</span>
+                  <span class="loading-text">{{ t('report.generating') }} {{ section.title }}...</span>
                 </div>
               </div>
             </div>
@@ -72,7 +72,7 @@
             <div class="waiting-ring"></div>
             <div class="waiting-ring"></div>
           </div>
-          <span class="waiting-text">Waiting for Report Agent...</span>
+          <span class="waiting-text">{{ t('report.waitingAgent') }}</span>
         </div>
       </div>
 
@@ -103,6 +103,26 @@
             <div class="metric metric-right">
               <span class="metric-pill" :class="`pill--${statusClass}`">{{ statusText }}</span>
             </div>
+          </div>
+
+          <div class="report-controls">
+            <button
+              v-if="reportStatus === 'generating'"
+              class="ctrl-btn ctrl-stop"
+              @click="handleStop"
+            >{{ t('report.stop') }}</button>
+
+            <button
+              v-if="reportStatus === 'cancelled' || reportStatus === 'failed' || reportStatus === 'budget_exceeded'"
+              class="ctrl-btn ctrl-resume"
+              @click="handleResume"
+            >{{ t('report.resume') }}</button>
+
+            <button
+              v-if="reportStatus !== 'generating'"
+              class="ctrl-btn ctrl-reset"
+              @click="handleReset"
+            >{{ t('report.reset') }}</button>
           </div>
 
           <div class="workflow-steps" v-if="workflowSteps.length > 0">
@@ -392,7 +412,10 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAgentLog, getConsoleLog } from '../api/report'
+import { getAgentLog, getConsoleLog, stopReport, resumeReport, resetReport } from '../api/report'
+import { useLocale } from '../composables/useLocale.js'
+
+const { t } = useLocale()
 
 const router = useRouter()
 
@@ -1698,6 +1721,30 @@ const QuickSearchDisplay = {
       ])
     ])
   }
+}
+
+// Report status derived from component state
+const reportStatus = computed(() => {
+  if (isComplete.value) return 'completed'
+  if (agentLogs.value.length > 0) return 'generating'
+  return 'pending'
+})
+
+// Control button handlers
+async function handleStop() {
+  if (!props.reportId) return
+  await stopReport(props.reportId)
+}
+
+async function handleResume() {
+  if (!props.reportId) return
+  await resumeReport(props.reportId)
+}
+
+async function handleReset() {
+  if (!props.reportId) return
+  if (!confirm(t('report.resetConfirm'))) return
+  await resetReport(props.reportId)
 }
 
 // Computed
@@ -5147,4 +5194,23 @@ watch(() => props.reportId, (newId) => {
 .log-msg.error { color: #EF5350; }
 .log-msg.warning { color: #FFA726; }
 .log-msg.success { color: #66BB6A; }
+
+/* Report Control Buttons */
+.report-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.ctrl-btn {
+  padding: 6px 14px;
+  border: 1px solid #000;
+  background: transparent;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ctrl-stop:hover { background: #fee2e2; border-color: #ef4444; }
+.ctrl-resume:hover { background: #d1fae5; border-color: #10b981; }
+.ctrl-reset:hover { background: #f3f4f6; }
 </style>

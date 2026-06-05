@@ -49,3 +49,12 @@ export const getReport = (reportId) => {
 export const chatWithReport = (data) => {
   return requestWithRetry(() => service.post('/api/report/chat', data), 3, 1000)
 }
+
+export const stopReport = (reportId) =>
+  service.post(`/api/report/${reportId}/stop`)
+
+export const resumeReport = (reportId) =>
+  service.post(`/api/report/${reportId}/resume`)
+
+export const resetReport = (reportId) =>
+  service.post(`/api/report/${reportId}/reset`)
