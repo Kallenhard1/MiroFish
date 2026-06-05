@@ -5,7 +5,7 @@
       <div class="nav-brand">MIROFISH</div>
       <div class="nav-links">
         <a href="https://github.com/666ghj/MiroFish" target="_blank" class="github-link">
-          访问我们的Github主页 <span class="arrow">↗</span>
+          {{ t('nav.github') }} <span class="arrow">↗</span>
         </a>
       </div>
     </nav>
@@ -124,8 +124,8 @@
             <!-- 上传区域 -->
             <div class="console-section">
               <div class="console-header">
-                <span class="console-label">01 / 现实种子</span>
-                <span class="console-meta">支持格式: PDF, MD, TXT</span>
+                <span class="console-label">{{ t('home.seedLabel') }}</span>
+                <span class="console-meta">{{ t('home.seedFormats') }}</span>
               </div>
               
               <div 
@@ -148,8 +148,8 @@
                 
                 <div v-if="files.length === 0" class="upload-placeholder">
                   <div class="upload-icon">↑</div>
-                  <div class="upload-title">拖拽文件上传</div>
-                  <div class="upload-hint">或点击浏览文件系统</div>
+                  <div class="upload-title">{{ t('home.uploadDrag') }}</div>
+                  <div class="upload-hint">{{ t('home.uploadClick') }}</div>
                 </div>
                 
                 <div v-else class="file-list">
@@ -164,13 +164,13 @@
 
             <!-- 分割线 -->
             <div class="console-divider">
-              <span>输入参数</span>
+              <span>{{ t('home.inputParams') }}</span>
             </div>
 
             <!-- 输入区域 -->
             <div class="console-section">
               <div class="console-header">
-                <span class="console-label">>_ 02 / 模拟提示词</span>
+                <span class="console-label">{{ t('home.promptLabel') }}</span>
               </div>
               <div class="input-wrapper">
                 <textarea
@@ -184,6 +184,31 @@
               </div>
             </div>
 
+            <!-- Advanced Settings toggle -->
+            <div class="console-section advanced-section">
+              <button class="advanced-toggle" @click="showAdvanced = !showAdvanced">
+                {{ showAdvanced ? t('home.advancedSettingsOpen') : t('home.advancedSettings') }}
+              </button>
+              <div v-if="showAdvanced" class="limits-grid">
+                <label class="limit-label">
+                  {{ t('home.maxNodes') }}
+                  <input type="number" v-model.number="limits.max_nodes" min="50" max="5000" class="limit-input" />
+                </label>
+                <label class="limit-label">
+                  {{ t('home.maxRelations') }}
+                  <input type="number" v-model.number="limits.max_relations" min="100" max="20000" class="limit-input" />
+                </label>
+                <label class="limit-label">
+                  {{ t('home.maxPersonas') }}
+                  <input type="number" v-model.number="limits.max_personas" min="2" max="200" class="limit-input" />
+                </label>
+                <label class="limit-label">
+                  {{ t('home.maxLlmCalls') }}
+                  <input type="number" v-model.number="limits.max_llm_calls" min="10" max="2000" class="limit-input" />
+                </label>
+              </div>
+            </div>
+
             <!-- 启动按钮 -->
             <div class="console-section btn-section">
               <button 
@@ -191,8 +216,8 @@
                 @click="startSimulation"
                 :disabled="!canSubmit || loading"
               >
-                <span v-if="!loading">启动引擎</span>
-                <span v-else>初始化中...</span>
+                <span v-if="!loading">{{ t('home.startEngine') }}</span>
+                <span v-else>{{ t('home.initializing') }}</span>
                 <span class="btn-arrow">→</span>
               </button>
             </div>
@@ -207,9 +232,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
+import { useLocale } from '../composables/useLocale.js'
+const { t } = useLocale()
 
 const router = useRouter()
 
@@ -225,6 +252,15 @@ const files = ref([])
 const loading = ref(false)
 const error = ref('')
 const isDragOver = ref(false)
+
+// 高级设置
+const showAdvanced = ref(false)
+const limits = reactive({
+  max_nodes: 500,
+  max_relations: 2000,
+  max_personas: 20,
+  max_llm_calls: 200,
+})
 
 // 文件输入引用
 const fileInput = ref(null)
@@ -294,7 +330,7 @@ const startSimulation = () => {
   
   // 存储待上传的数据
   import('../store/pendingUpload.js').then(({ setPendingUpload }) => {
-    setPendingUpload(files.value, formData.value.simulationRequirement)
+    setPendingUpload(files.value, formData.value.simulationRequirement, { ...limits })
     
     // 立即跳转到Process页面（使用特殊标识表示新建项目）
     router.push({
@@ -865,6 +901,38 @@ const startSimulation = () => {
   0% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.2); }
   70% { box-shadow: 0 0 0 6px rgba(0, 0, 0, 0); }
   100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+}
+
+.advanced-toggle {
+  background: none;
+  border: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+.limits-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.limit-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #666;
+}
+.limit-input {
+  border: 1px solid #ddd;
+  padding: 6px 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  width: 100%;
 }
 
 /* 响应式适配 */
