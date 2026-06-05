@@ -1592,8 +1592,6 @@ class ReportAgent:
             # 初始化：创建报告文件夹并保存初始状态
             ReportManager._ensure_report_folder(report_id)
 
-            # Clear any stale cancellation signal from a previous run
-            ReportManager.clear_stop(report_id)
 
             # 初始化日志记录器（结构化日志 agent_log.jsonl）
             self.report_logger = ReportLogger(report_id)
@@ -1612,37 +1610,48 @@ class ReportAgent:
             )
             ReportManager.save_report(report)
             
-            # 阶段1: 规划大纲
-            report.status = ReportStatus.PLANNING
-            ReportManager.update_progress(
-                report_id, "planning", 5, "开始规划报告大纲...",
-                completed_sections=[]
-            )
-            
-            # 记录规划开始日志
-            self.report_logger.log_planning_start()
-            
-            if progress_callback:
-                progress_callback("planning", 0, "开始规划报告大纲...")
-            
-            outline = self.plan_outline(
-                progress_callback=lambda stage, prog, msg: 
-                    progress_callback(stage, prog // 5, msg) if progress_callback else None
-            )
+            # 阶段1: 规划大纲（resume时从磁盘加载已保存的大纲）
+            outline = None
+            if start_section_index > 0:
+                outline_path = ReportManager._get_outline_path(report_id)
+                if os.path.exists(outline_path):
+                    with open(outline_path, 'r', encoding='utf-8') as _f:
+                        outline_data = json.load(_f)
+                    sections = [
+                        ReportSection(title=s['title'], content=s.get('content', ''))
+                        for s in outline_data.get('sections', [])
+                    ]
+                    outline = ReportOutline(
+                        title=outline_data['title'],
+                        summary=outline_data['summary'],
+                        sections=sections,
+                    )
+                    logger.info(f"Resume: loaded saved outline ({len(sections)} sections) for {report_id}")
+
+            if outline is None:
+                report.status = ReportStatus.PLANNING
+                ReportManager.update_progress(
+                    report_id, "planning", 5, "开始规划报告大纲...",
+                    completed_sections=[]
+                )
+                self.report_logger.log_planning_start()
+                if progress_callback:
+                    progress_callback("planning", 0, "开始规划报告大纲...")
+
+                outline = self.plan_outline(
+                    progress_callback=lambda stage, prog, msg:
+                        progress_callback(stage, prog // 5, msg) if progress_callback else None
+                )
+                self.report_logger.log_planning_complete(outline.to_dict())
+                ReportManager.save_outline(report_id, outline)
+                ReportManager.update_progress(
+                    report_id, "planning", 15, f"大纲规划完成，共{len(outline.sections)}个章节",
+                    completed_sections=[]
+                )
+                logger.info(f"大纲已保存到文件: {report_id}/outline.json")
+
             report.outline = outline
-            
-            # 记录规划完成日志
-            self.report_logger.log_planning_complete(outline.to_dict())
-            
-            # 保存大纲到文件
-            ReportManager.save_outline(report_id, outline)
-            ReportManager.update_progress(
-                report_id, "planning", 15, f"大纲规划完成，共{len(outline.sections)}个章节",
-                completed_sections=[]
-            )
             ReportManager.save_report(report)
-            
-            logger.info(f"大纲已保存到文件: {report_id}/outline.json")
             
             # 阶段2: 逐章节生成（分章节保存）
             report.status = ReportStatus.GENERATING

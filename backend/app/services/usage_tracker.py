@@ -36,7 +36,10 @@ class UsageTracker:
     @classmethod
     def _get_path(cls, project_id: str) -> str:
         os.makedirs(cls.USAGE_DIR, exist_ok=True)
-        return os.path.join(cls.USAGE_DIR, f"{project_id}.json")
+        path = os.path.realpath(os.path.join(cls.USAGE_DIR, f"{project_id}.json"))
+        if not path.startswith(os.path.realpath(cls.USAGE_DIR)):
+            raise ValueError(f"Invalid project_id: {project_id!r}")
+        return path
 
     @classmethod
     def _load(cls, project_id: str) -> dict:
@@ -80,7 +83,9 @@ class UsageTracker:
 
     @classmethod
     def get_usage(cls, project_id: str) -> dict:
-        data = cls._load(project_id)
+        lock = cls._get_lock(project_id)
+        with lock:
+            data = cls._load(project_id)
         prompt = data.get('prompt_tokens', 0)
         completion = data.get('completion_tokens', 0)
         model = data.get('model_name', '')

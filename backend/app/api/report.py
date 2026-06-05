@@ -154,13 +154,14 @@ def generate_report():
                 # 保存报告
                 ReportManager.save_report(report)
                 
-                if report.status == ReportStatus.COMPLETED:
+                terminal_ok = {ReportStatus.COMPLETED, ReportStatus.CANCELLED, ReportStatus.BUDGET_EXCEEDED}
+                if report.status in terminal_ok:
                     task_manager.complete_task(
                         task_id,
                         result={
                             "report_id": report.report_id,
                             "simulation_id": simulation_id,
-                            "status": "completed"
+                            "status": report.status.value,
                         }
                     )
                 else:

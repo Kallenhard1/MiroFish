@@ -175,13 +175,19 @@ def generate_ontology():
         project = ProjectManager.create_project(name=project_name)
         project.simulation_requirement = simulation_requirement
         # Store pre-run limits if provided by the frontend
+        def _safe_int(val):
+            try:
+                return int(val) if val is not None else None
+            except (ValueError, TypeError):
+                return None
+
         project.limits = {
-            k: int(v)
+            k: v
             for k, v in {
-                'max_nodes': request.form.get('max_nodes'),
-                'max_relations': request.form.get('max_relations'),
-                'max_personas': request.form.get('max_personas'),
-                'max_llm_calls': request.form.get('max_llm_calls'),
+                'max_nodes': _safe_int(request.form.get('max_nodes')),
+                'max_relations': _safe_int(request.form.get('max_relations')),
+                'max_personas': _safe_int(request.form.get('max_personas')),
+                'max_llm_calls': _safe_int(request.form.get('max_llm_calls')),
             }.items()
             if v is not None
         }
@@ -486,9 +492,9 @@ def build_graph():
                 # Check if node/edge counts exceeded limits
                 limits = project.limits or {}
                 limits_hit = []
-                if limits.get('max_nodes') and node_count >= limits['max_nodes']:
+                if limits.get('max_nodes') and node_count > limits['max_nodes']:
                     limits_hit.append('max_nodes')
-                if limits.get('max_relations') and edge_count >= limits['max_relations']:
+                if limits.get('max_relations') and edge_count > limits['max_relations']:
                     limits_hit.append('max_relations')
 
                 # 完成
