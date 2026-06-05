@@ -1,7 +1,7 @@
 <template>
   <router-view />
   <button class="locale-toggle" @click="setLocale(locale === 'zh' ? 'en' : 'zh')">
-    {{ locale === 'zh' ? 'EN' : '中' }}
+    {{ locale === 'zh' ? 'EN' : 'ZH' }}
   </button>
 </template>
 
