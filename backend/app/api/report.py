@@ -134,7 +134,9 @@ def generate_report():
                 agent = ReportAgent(
                     graph_id=graph_id,
                     simulation_id=simulation_id,
-                    simulation_requirement=simulation_requirement
+                    simulation_requirement=simulation_requirement,
+                    project_id=state.project_id,
+                    limits=project.limits or {},
                 )
                 
                 # 进度回调
@@ -1067,6 +1069,8 @@ def resume_report(report_id: str):
                     graph_id=graph_id,
                     simulation_id=report.simulation_id,
                     simulation_requirement=report.simulation_requirement,
+                    project_id=state.project_id,
+                    limits=project.limits or {},
                 )
                 def progress_callback(stage, progress, msg):
                     task_manager.update_task(task_id, progress=progress, message=f"[{stage}] {msg}")
@@ -1143,6 +1147,8 @@ def reset_report(report_id: str):
                     graph_id=graph_id,
                     simulation_id=report.simulation_id,
                     simulation_requirement=report.simulation_requirement,
+                    project_id=state.project_id,
+                    limits=project.limits or {},
                 )
                 def progress_callback(stage, progress, msg):
                     task_manager.update_task(task_id, progress=progress, message=f"[{stage}] {msg}")

@@ -892,12 +892,14 @@ class ReportAgent:
     MAX_TOOL_CALLS_PER_CHAT = 2
     
     def __init__(
-        self, 
+        self,
         graph_id: str,
         simulation_id: str,
         simulation_requirement: str,
         llm_client: Optional[LLMClient] = None,
-        zep_tools: Optional[ZepToolsService] = None
+        zep_tools: Optional[ZepToolsService] = None,
+        project_id: Optional[str] = None,
+        limits: Optional[Dict[str, Any]] = None,
     ):
         """
         初始化Report Agent
@@ -912,8 +914,12 @@ class ReportAgent:
         self.graph_id = graph_id
         self.simulation_id = simulation_id
         self.simulation_requirement = simulation_requirement
-        
-        self.llm = llm_client or LLMClient()
+        self.project_id = project_id
+        self.limits = limits or {}
+        max_calls = self.limits.get('max_llm_calls', None)
+        self._calls_remaining = int(max_calls) if max_calls else None
+
+        self.llm = llm_client or LLMClient(project_id=self.project_id)
         self.zep_tools = zep_tools or ZepToolsService()
         
         # 工具定义
@@ -923,8 +929,6 @@ class ReportAgent:
         self.report_logger: Optional[ReportLogger] = None
         # 控制台日志记录器（在 generate_report 中初始化）
         self.console_logger: Optional[ReportConsoleLogger] = None
-
-        self._calls_remaining = None  # set via limits in generate_report if needed
 
         logger.info(f"ReportAgent 初始化完成: graph_id={graph_id}, simulation_id={simulation_id}")
     
